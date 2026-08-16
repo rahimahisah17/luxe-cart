@@ -1,4 +1,3 @@
-cat > backend/server.js <<'EOF'
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
@@ -40,4 +39,3 @@ app.listen(PORT, () => {
   console.log(`LuxeCart backend running on port ${PORT}`)
 })
 
-EOF
