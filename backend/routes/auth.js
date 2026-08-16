@@ -218,4 +218,62 @@ router.post('/google', async (req, res) => {
   }
 })
 
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      })
+    }
+
+    const normalizedEmail = email.toLowerCase()
+
+    const result = await pool.query(
+      'SELECT id, email FROM users WHERE email = $1',
+      [normalizedEmail]
+    )
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message:
+          'If an account exists for this email, a password reset link has been sent.',
+      })
+    }
+
+    const crypto = require('crypto')
+
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    const expires = new Date(Date.now() + 60 * 60 * 1000)
+
+    await pool.query(
+      `UPDATE users
+       SET reset_token = $1,
+           reset_token_expires = $2
+       WHERE id = $3`,
+      [resetToken, expires, result.rows[0].id]
+    )
+
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`
+
+    console.log('Password reset link:', resetUrl)
+
+    res.json({
+      success: true,
+      message:
+        'Password reset link generated. Check the backend terminal for the reset link.',
+    })
+  } catch (error) {
+    console.error('Forgot password error:', error)
+
+    res.status(500).json({
+      success: false,
+      message: 'Unable to process password reset request',
+    })
+  }
+})
+
 module.exports = router
