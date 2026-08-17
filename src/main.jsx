@@ -16,6 +16,7 @@ import Payment from './Payment.jsx'
 import OrderSuccess from './OrderSuccess.jsx'
 import Settings from './Settings.jsx'
 import ForgotPassword from './ForgotPassword.jsx'
+import ResetPassword from './ResetPassword.jsx'
 import { CartProvider } from './context/CartContext.jsx'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -41,6 +42,7 @@ createRoot(document.getElementById('root')).render(
             />
             <Route path="/settings" element={<Settings />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </BrowserRouter>
       </CartProvider>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from './context/CartContext.jsx'
 import products from './data/products.js'
@@ -10,6 +11,59 @@ function App() {
     addToWishlist,
     isInWishlist,
   } = useCart()
+
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null')
+    } catch {
+      return null
+    }
+  })
+
+  const [profilePhoto, setProfilePhoto] = useState(
+    () => localStorage.getItem('profilePhoto') || ''
+  )
+
+  const [showAccountMenu, setShowAccountMenu] = useState(false)
+
+  useEffect(() => {
+    const syncUser = () => {
+      try {
+        setUser(JSON.parse(localStorage.getItem('user') || 'null'))
+      } catch {
+        setUser(null)
+      }
+
+      setProfilePhoto(localStorage.getItem('profilePhoto') || '')
+    }
+
+    window.addEventListener('storage', syncUser)
+    window.addEventListener('focus', syncUser)
+
+    return () => {
+      window.removeEventListener('storage', syncUser)
+      window.removeEventListener('focus', syncUser)
+    }
+  }, [])
+
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'U'
+
+  const handleSignOut = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('profilePhoto')
+
+    setUser(null)
+    setProfilePhoto('')
+    setShowAccountMenu(false)
+  }
 
   const categories = [
     {
@@ -68,12 +122,82 @@ function App() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="hidden rounded-xl px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100 sm:block"
-            >
-              Sign In
-            </Link>
+            {user ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountMenu(!showAccountMenu)}
+                  className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-slate-100"
+                >
+                  {profilePhoto ? (
+                    <img
+                      src={profilePhoto}
+                      alt={user.name || 'Profile'}
+                      className="h-10 w-10 rounded-full object-cover ring-2 ring-amber-400"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 font-bold text-white">
+                      {initials}
+                    </div>
+                  )}
+
+                  <div className="hidden text-left sm:block">
+                    <p className="text-sm font-bold text-slate-900">
+                      {user.name || 'My Account'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      My Account
+                    </p>
+                  </div>
+
+                  <span className="text-slate-400">⌄</span>
+                </button>
+
+                {showAccountMenu && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                    <div className="border-b border-slate-100 px-4 py-3">
+                      <p className="font-bold text-slate-900">
+                        {user.name || 'LuxeCart Customer'}
+                      </p>
+                      <p className="mt-1 break-all text-xs text-slate-500">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/profile"
+                      onClick={() => setShowAccountMenu(false)}
+                      className="mt-1 block rounded-xl px-4 py-3 font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      👤 My Profile
+                    </Link>
+
+                    <Link
+                      to="/settings"
+                      onClick={() => setShowAccountMenu(false)}
+                      className="block rounded-xl px-4 py-3 font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      ⚙️ Settings
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-full rounded-xl px-4 py-3 text-left font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="rounded-xl px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Sign In
+              </Link>
+            )}
 
             <Link
               to="/cart"
@@ -118,12 +242,14 @@ function App() {
                 Shop Now
               </a>
 
-              <Link
-                to="/register"
-                className="rounded-xl border border-white/20 px-7 py-4 font-bold text-white transition hover:bg-white/10"
-              >
-                Create Account
-              </Link>
+              {!user && (
+                <Link
+                  to="/register"
+                  className="rounded-xl border border-white/20 px-7 py-4 font-bold text-white transition hover:bg-white/10"
+                >
+                  Create Account
+                </Link>
+              )}
             </div>
           </div>
 
@@ -144,6 +270,7 @@ function App() {
             <p className="text-sm font-bold uppercase tracking-widest text-amber-500">
               Explore
             </p>
+
             <h2 className="mt-2 text-3xl font-black">
               Shop by Category
             </h2>
@@ -169,6 +296,7 @@ function App() {
                 <h3 className="text-2xl font-black">
                   {category.name}
                 </h3>
+
                 <p className="mt-1 text-sm text-slate-200">
                   Explore collection →
                 </p>
