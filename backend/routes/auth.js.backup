@@ -1,7 +1,6 @@
 const express = require('express')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const crypto = require('crypto')
 const { OAuth2Client } = require('google-auth-library')
 const pool = require('../db/database')
 
@@ -11,7 +10,6 @@ const googleClient = new OAuth2Client(
 
 const router = express.Router()
 
-// Register
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body
@@ -30,11 +28,9 @@ router.post('/register', async (req, res) => {
       })
     }
 
-    const normalizedEmail = email.toLowerCase()
-
     const existingUser = await pool.query(
       'SELECT id FROM users WHERE email = $1',
-      [normalizedEmail]
+      [email.toLowerCase()]
     )
 
     if (existingUser.rows.length > 0) {
@@ -50,7 +46,7 @@ router.post('/register', async (req, res) => {
       `INSERT INTO users (name, email, password_hash)
        VALUES ($1, $2, $3)
        RETURNING id, name, email, created_at`,
-      [name, normalizedEmail, passwordHash]
+      [name, email.toLowerCase(), passwordHash]
     )
 
     res.status(201).json({
@@ -68,7 +64,6 @@ router.post('/register', async (req, res) => {
   }
 })
 
-// Email/password login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body
@@ -93,13 +88,6 @@ router.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0]
-
-    if (!user.password_hash) {
-      return res.status(401).json({
-        success: false,
-        message: 'This account does not have a password. Please use Google Sign In.',
-      })
-    }
 
     const passwordMatches = await bcrypt.compare(
       password,
@@ -143,8 +131,6 @@ router.post('/login', async (req, res) => {
     })
   }
 })
-
-// Google login
 router.post('/google', async (req, res) => {
   try {
     const { credential } = req.body
@@ -232,7 +218,6 @@ router.post('/google', async (req, res) => {
   }
 })
 
-// Forgot password
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body
@@ -255,9 +240,11 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({
         success: true,
         message:
-          'If an account exists for this email, a password reset link has been generated.',
+          'If an account exists for this email, a password reset link has been sent.',
       })
     }
+
+    const crypto = require('crypto')
 
     const resetToken = crypto.randomBytes(32).toString('hex')
     const expires = new Date(Date.now() + 60 * 60 * 1000)
@@ -270,13 +257,9 @@ router.post('/forgot-password', async (req, res) => {
       [resetToken, expires, result.rows[0].id]
     )
 
-    const resetUrl =
-      `http://localhost:5173/reset-password?token=${resetToken}`
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`
 
-    console.log('\n========================================')
-    console.log('LUXECART PASSWORD RESET LINK')
-    console.log(resetUrl)
-    console.log('========================================\n')
+    console.log('Password reset link:', resetUrl)
 
     res.json({
       success: true,
@@ -293,7 +276,6 @@ router.post('/forgot-password', async (req, res) => {
   }
 })
 
-// Reset password
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body
